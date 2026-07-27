@@ -1,0 +1,57 @@
+name: Deploy to Staging
+
+on:
+  pull_request:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ap-south-1
+  ECR_REPOSITORY: ecommerce-default
+  ECS_CLUSTER: ecommerce-default-cluster
+  ECS_SERVICE: ecommerce-service
+
+jobs:
+  staging:
+    runs-on: ubuntu-latest
+    environment: staging
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - run: terraform -chdir=terraform init
+
+      - run: terraform -chdir=terraform validate
+
+      - uses: terraform-linters/setup-tflint@v4
+
+      - run: |
+          cd terraform
+          tflint --init
+          tflint
+
+      - uses: aws-actions/amazon-ecr-login@v2
+
+      - run: docker build -t $ECR_REPOSITORY ./app
+
+      - run: |
+          docker tag $ECR_REPOSITORY:latest \
+          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+
+      - run: |
+          docker push \
+          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+
+      - run: |
+          aws ecs update-service \
+          --cluster $ECS_CLUSTER \
+          --service $ECS_SERVICE \
+          --force-new-deployment
