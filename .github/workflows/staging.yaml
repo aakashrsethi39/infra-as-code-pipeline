@@ -18,11 +18,16 @@ jobs:
 
     steps:
       - uses: actions/checkout@v4
+      - name: Check Secrets
+        run: |
+          echo "Access key present: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
+          echo "Secret key present: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
+          echo "Region: ${{ secrets.AWS_REGION }}"
 
       - uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          aws-secret-access-key: ${{ secrets.SECRET_ACCESS_KEY }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
       - uses: hashicorp/setup-terraform@v3
