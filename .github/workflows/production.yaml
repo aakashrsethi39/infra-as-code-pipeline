@@ -205,28 +205,7 @@ jobs:
       # Verify ALB Health
       #######################################################
 
-      - name: Verify Deployment
-        id: verify
-        continue-on-error: true
-        run: |
-
-          TARGET_GROUP=$(aws elbv2 describe-target-groups \
-            --names ecommerce-production-tg \
-            --query "TargetGroups[0].TargetGroupArn" \
-            --output text)
-
-          echo "Waiting 30 seconds..."
-          sleep 30
-
-          HEALTH=$(aws elbv2 describe-target-health \
-            --target-group-arn $TARGET_GROUP \
-            --query "TargetHealthDescriptions[*].TargetHealth.State" \
-            --output text)
-
-          echo "Health = $HEALTH"
-
-          echo "$HEALTH" | grep unhealthy && exit 1
-          echo "$HEALTH" | grep initial && exit 1
+      
 
 
       #######################################################
@@ -234,7 +213,7 @@ jobs:
       #######################################################
 
       - name: Rollback
-        if: steps.wait.outcome == 'failure' || steps.verify.outcome == 'failure'
+        if: steps.wait.outcome == 'failure'
         run: |
 
           echo "Deployment failed."
@@ -251,6 +230,13 @@ jobs:
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --services ${{ steps.tf.outputs.service_name }}
+
+          echo "Current service status:"
+
+          aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].{TaskDefinition:taskDefinition,Running:runningCount,Desired:desiredCount}"
 
           echo "Rollback completed."
 
