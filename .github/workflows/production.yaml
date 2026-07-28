@@ -158,6 +158,23 @@ jobs:
           image: ${{ steps.tf.outputs.repository_url }}:${{ env.IMAGE_TAG }}
 
       #######################################################
+      # Save Current Task Definition
+      #######################################################
+
+      - name: Save Current Task Definition
+        id: current
+        run: |
+          CURRENT_TASK=$(aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].taskDefinition" \
+            --output text)
+
+          echo "CURRENT_TASK=$CURRENT_TASK"
+
+          echo "task_definition=$CURRENT_TASK" >> $GITHUB_OUTPUT
+
+      #######################################################
       # Deploy to ECS
       #######################################################
 
@@ -171,10 +188,10 @@ jobs:
           wait-for-service-stability: false
 
       #######################################################
-      # Wait for Deployment
+      # Wait for Service Stability
       #######################################################
 
-      - name: Wait for Deployment
+      - name: Wait for ECS Service
         id: wait
         run: |
           echo "Waiting for ECS deployment..."
@@ -213,45 +230,53 @@ jobs:
           exit 1
 
       #######################################################
-      # Rollback
+      # Verify ALB Health
+      #######################################################
+
+      
+
+
+      #######################################################
+      # Rollback if Health Check Failed
       #######################################################
 
       - name: Rollback
         if: failure()
         run: |
-          echo "Deployment failed. Rolling back..."
 
-          CURRENT=$(aws ecs describe-services \
-            --cluster ${{ steps.tf.outputs.cluster_name }} \
-            --services ${{ steps.tf.outputs.service_name }} \
-            --query "services[0].taskDefinition" \
-            --output text)
+          echo "Deployment failed."
 
-          FAMILY=$(basename "$CURRENT" | cut -d':' -f1)
-
-          PREVIOUS=$(aws ecs list-task-definitions \
-            --family-prefix $FAMILY \
-            --status ACTIVE \
-            --sort DESC \
-            --query "taskDefinitionArns[1]" \
-            --output text)
-
-          if [ "$PREVIOUS" = "None" ] || [ -z "$PREVIOUS" ]; then
-            echo "No previous task definition found."
-            exit 1
-          fi
-
-          echo "Rolling back to $PREVIOUS"
+          echo "Rolling back to:"
+          echo "${{ steps.current.outputs.task_definition }}"
 
           aws ecs update-service \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --service ${{ steps.tf.outputs.service_name }} \
-            --task-definition $PREVIOUS \
+            --task-definition "${{ steps.current.outputs.task_definition }}" \
             --force-new-deployment
 
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --services ${{ steps.tf.outputs.service_name }}
+
+          echo "Current service status:"
+
+          aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].{TaskDefinition:taskDefinition,Running:runningCount,Desired:desiredCount}"
+
+          echo "Rollback completed."
+
+          aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].taskDefinition"
+
+          echo "Deployment failed. Service has been rolled back to the previous stable task definition."
+
+          exit 1
+
 
       #######################################################
       # Deployment Summary
@@ -261,7 +286,7 @@ jobs:
         if: success()
         run: |
           echo "Production Deployment Completed Successfully"
-          echo "Cluster     : ${{ steps.tf.outputs.cluster_name }}"
-          echo "Service     : ${{ steps.tf.outputs.service_name }}"
-          echo "Repository  : ${{ steps.tf.outputs.repository_url }}"
-          echo "Image Tag   : ${IMAGE_TAG}"
+          echo "Cluster : ${{ steps.tf.outputs.cluster_name }}"
+          echo "Service : ${{ steps.tf.outputs.service_name }}"
+          echo "Repository : ${{ steps.tf.outputs.repository_url }}"
+          echo "Image Tag : ${IMAGE_TAG}"
