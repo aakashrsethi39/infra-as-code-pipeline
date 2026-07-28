@@ -254,6 +254,13 @@ jobs:
 
           echo "Rollback completed."
 
+          aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].taskDefinition"
+
+          echo "Deployment failed. Service has been rolled back to the previous stable task definition."
+
           exit 1
 
 
