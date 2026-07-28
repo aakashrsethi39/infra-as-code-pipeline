@@ -56,12 +56,6 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
-      #######################################################
-      # Select Workspace
-      #######################################################
-
-      - name: Select Workspace
-        run: terraform workspace select $TF_WORKSPACE
 
       #######################################################
       # Terraform Format Check

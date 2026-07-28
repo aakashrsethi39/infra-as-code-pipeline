@@ -1,15 +1,8 @@
 locals {
 
-  project_name = "ecommerce"
+  project_name = var.project_name
 
   environment = terraform.workspace
 
-  aws_region = var.region
-
-  common_tags = {
-    Project     = local.project_name
-    Environment = local.environment
-    ManagedBy   = "Terraform"
-  }
 
 }
