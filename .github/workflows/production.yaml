@@ -159,6 +159,23 @@ jobs:
           image: ${{ steps.tf.outputs.repository_url }}:${{ env.IMAGE_TAG }}
 
       #######################################################
+      # Save Current Task Definition
+      #######################################################
+
+      - name: Save Current Task Definition
+        id: current
+        run: |
+          CURRENT_TASK=$(aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].taskDefinition" \
+            --output text)
+
+          echo "CURRENT_TASK=$CURRENT_TASK"
+
+          echo "task_definition=$CURRENT_TASK" >> $GITHUB_OUTPUT
+
+      #######################################################
       # Deploy to ECS
       #######################################################
 
@@ -176,6 +193,8 @@ jobs:
       #######################################################
 
       - name: Wait for ECS Service
+        id: wait
+        continue-on-error: true
         run: |
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
@@ -215,34 +234,27 @@ jobs:
       #######################################################
 
       - name: Rollback
-        if: steps.verify.outcome == 'failure'
+        if: steps.wait.outcome == 'failure' || steps.verify.outcome == 'failure'
         run: |
 
           echo "Deployment failed."
-          echo "Rolling back..."
 
-          FAMILY=${{ steps.tf.outputs.task_family }}
-
-          PREVIOUS=$(aws ecs list-task-definitions \
-            --family-prefix $FAMILY \
-            --sort DESC \
-            --status ACTIVE \
-            --query "taskDefinitionArns[1]" \
-            --output text)
-
-          echo "Rollback to"
-
-          echo $PREVIOUS
+          echo "Rolling back to:"
+          echo "${{ steps.current.outputs.task_definition }}"
 
           aws ecs update-service \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --service ${{ steps.tf.outputs.service_name }} \
-            --task-definition $PREVIOUS \
+            --task-definition "${{ steps.current.outputs.task_definition }}" \
             --force-new-deployment
 
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --services ${{ steps.tf.outputs.service_name }}
+
+          echo "Rollback completed."
+
+          exit 1
 
 
       #######################################################
