@@ -56,6 +56,10 @@ jobs:
       - name: Terraform Init
         run: terraform init
 
+      - name: Select Terraform Workspace
+        run: |
+          terraform workspace select production
+
       #######################################################
       # Terraform Format Check
       #######################################################
@@ -98,6 +102,13 @@ jobs:
           echo "task_family=$(terraform output -raw task_definition_family)" >> $GITHUB_OUTPUT
           echo "container_name=$(terraform output -raw container_name)" >> $GITHUB_OUTPUT
           echo "repository_url=$(terraform output -raw repository_url)" >> $GITHUB_OUTPUT
+
+      - name: Debug Outputs
+        run: |
+          echo "Cluster = ${{ steps.tf.outputs.cluster_name }}"
+          echo "Service = ${{ steps.tf.outputs.service_name }}"
+          echo "Task Family = ${{ steps.tf.outputs.task_family }}"
+          echo "Repository = ${{ steps.tf.outputs.repository_url }}"
 
       #######################################################
       # Login to Amazon ECR
@@ -158,23 +169,6 @@ jobs:
           image: ${{ steps.tf.outputs.repository_url }}:${{ env.IMAGE_TAG }}
 
       #######################################################
-      # Save Current Task Definition
-      #######################################################
-
-      - name: Save Current Task Definition
-        id: current
-        run: |
-          CURRENT_TASK=$(aws ecs describe-services \
-            --cluster ${{ steps.tf.outputs.cluster_name }} \
-            --services ${{ steps.tf.outputs.service_name }} \
-            --query "services[0].taskDefinition" \
-            --output text)
-
-          echo "CURRENT_TASK=$CURRENT_TASK"
-
-          echo "task_definition=$CURRENT_TASK" >> $GITHUB_OUTPUT
-
-      #######################################################
       # Deploy to ECS
       #######################################################
 
@@ -188,10 +182,10 @@ jobs:
           wait-for-service-stability: false
 
       #######################################################
-      # Wait for Service Stability
+      # Wait for Deployment
       #######################################################
 
-      - name: Wait for ECS Service
+      - name: Wait for Deployment
         id: wait
         run: |
           echo "Waiting for ECS deployment..."
@@ -230,53 +224,45 @@ jobs:
           exit 1
 
       #######################################################
-      # Verify ALB Health
-      #######################################################
-
-      
-
-
-      #######################################################
-      # Rollback if Health Check Failed
+      # Rollback
       #######################################################
 
       - name: Rollback
         if: failure()
         run: |
+          echo "Deployment failed. Rolling back..."
 
-          echo "Deployment failed."
+          CURRENT=$(aws ecs describe-services \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
+            --query "services[0].taskDefinition" \
+            --output text)
 
-          echo "Rolling back to:"
-          echo "${{ steps.current.outputs.task_definition }}"
+          FAMILY=$(basename "$CURRENT" | cut -d':' -f1)
+
+          PREVIOUS=$(aws ecs list-task-definitions \
+            --family-prefix $FAMILY \
+            --status ACTIVE \
+            --sort DESC \
+            --query "taskDefinitionArns[1]" \
+            --output text)
+
+          if [ "$PREVIOUS" = "None" ] || [ -z "$PREVIOUS" ]; then
+            echo "No previous task definition found."
+            exit 1
+          fi
+
+          echo "Rolling back to $PREVIOUS"
 
           aws ecs update-service \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --service ${{ steps.tf.outputs.service_name }} \
-            --task-definition "${{ steps.current.outputs.task_definition }}" \
+            --task-definition $PREVIOUS \
             --force-new-deployment
 
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --services ${{ steps.tf.outputs.service_name }}
-
-          echo "Current service status:"
-
-          aws ecs describe-services \
-            --cluster ${{ steps.tf.outputs.cluster_name }} \
-            --services ${{ steps.tf.outputs.service_name }} \
-            --query "services[0].{TaskDefinition:taskDefinition,Running:runningCount,Desired:desiredCount}"
-
-          echo "Rollback completed."
-
-          aws ecs describe-services \
-            --cluster ${{ steps.tf.outputs.cluster_name }} \
-            --services ${{ steps.tf.outputs.service_name }} \
-            --query "services[0].taskDefinition"
-
-          echo "Deployment failed. Service has been rolled back to the previous stable task definition."
-
-          exit 1
-
 
       #######################################################
       # Deployment Summary
@@ -286,7 +272,7 @@ jobs:
         if: success()
         run: |
           echo "Production Deployment Completed Successfully"
-          echo "Cluster : ${{ steps.tf.outputs.cluster_name }}"
-          echo "Service : ${{ steps.tf.outputs.service_name }}"
-          echo "Repository : ${{ steps.tf.outputs.repository_url }}"
-          echo "Image Tag : ${IMAGE_TAG}"
+          echo "Cluster     : ${{ steps.tf.outputs.cluster_name }}"
+          echo "Service     : ${{ steps.tf.outputs.service_name }}"
+          echo "Repository  : ${{ steps.tf.outputs.repository_url }}"
+          echo "Image Tag   : ${IMAGE_TAG}"
