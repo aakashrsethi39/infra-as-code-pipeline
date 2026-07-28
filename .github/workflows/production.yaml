@@ -172,12 +172,10 @@ jobs:
           wait-for-service-stability: false
 
       #######################################################
-      # Wait for Service Stability
+      # Wait for ECS Deployment
       #######################################################
 
-      - name: Wait for Deployment
-        id: wait
-        continue-on-error: true
+      - name: Wait for ECS Service
         run: |
           aws ecs wait services-stable \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
@@ -185,35 +183,56 @@ jobs:
             --region $AWS_REGION
 
       #######################################################
-      # Rollback
+      # Verify ALB Health
+      #######################################################
+
+      - name: Verify Deployment
+        id: verify
+        continue-on-error: true
+        run: |
+
+          TARGET_GROUP=$(aws elbv2 describe-target-groups \
+            --names ecommerce-production-tg \
+            --query "TargetGroups[0].TargetGroupArn" \
+            --output text)
+
+          echo "Waiting 30 seconds..."
+          sleep 30
+
+          HEALTH=$(aws elbv2 describe-target-health \
+            --target-group-arn $TARGET_GROUP \
+            --query "TargetHealthDescriptions[*].TargetHealth.State" \
+            --output text)
+
+          echo "Health = $HEALTH"
+
+          echo "$HEALTH" | grep unhealthy && exit 1
+          echo "$HEALTH" | grep initial && exit 1
+
+
+      #######################################################
+      # Rollback if Health Check Failed
       #######################################################
 
       - name: Rollback
-        if: steps.wait.outcome == 'failure'
+        if: steps.verify.outcome == 'failure'
         run: |
-          echo "Deployment failed. Rolling back..."
 
-          CURRENT=$(aws ecs describe-services \
-            --cluster ${{ steps.tf.outputs.cluster_name }} \
-            --services ${{ steps.tf.outputs.service_name }} \
-            --query "services[0].taskDefinition" \
-            --output text)
+          echo "Deployment failed."
+          echo "Rolling back..."
 
-          FAMILY=$(basename "$CURRENT" | cut -d':' -f1)
+          FAMILY=${{ steps.tf.outputs.task_family }}
 
           PREVIOUS=$(aws ecs list-task-definitions \
             --family-prefix $FAMILY \
-            --status ACTIVE \
             --sort DESC \
+            --status ACTIVE \
             --query "taskDefinitionArns[1]" \
             --output text)
 
-          if [ "$PREVIOUS" = "None" ] || [ -z "$PREVIOUS" ]; then
-            echo "No previous task definition found."
-            exit 1
-          fi
+          echo "Rollback to"
 
-          echo "Rolling back to $PREVIOUS"
+          echo $PREVIOUS
 
           aws ecs update-service \
             --cluster ${{ steps.tf.outputs.cluster_name }} \
@@ -225,13 +244,15 @@ jobs:
             --cluster ${{ steps.tf.outputs.cluster_name }} \
             --services ${{ steps.tf.outputs.service_name }}
 
+
       #######################################################
       # Summary
       #######################################################
 
       - name: Deployment Summary
+        if: success()
         run: |
-          echo "Production Deployment Completed Successfully"
+          echo "Production Deployment Successful"
           echo "Cluster : ${{ steps.tf.outputs.cluster_name }}"
           echo "Service : ${{ steps.tf.outputs.service_name }}"
           echo "Repository : ${{ steps.tf.outputs.repository_url }}"
