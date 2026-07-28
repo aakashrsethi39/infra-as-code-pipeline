@@ -515,8 +515,6 @@ CloudWatch is used for
 - Deployment Monitoring
 - Health Check Monitoring
 
-> 📷 **Paste CloudWatch Screenshot here**
-
 ---
 
 # Security
@@ -576,6 +574,8 @@ aws elbv2 describe-target-health
 aws logs tail
 
 aws ecr get-login-password
+
+aws elbv2 describe-load-balancers
 ```
 
 ---
