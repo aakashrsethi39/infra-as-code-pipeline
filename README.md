@@ -1,50 +1,113 @@
-# 🚀 Infrastructure as Code CI/CD Pipeline on AWS using Terraform, Docker, ECS Fargate & GitHub Actions
+# Infrastructure as Code Pipeline
 
-## 📌 Project Overview
+A production-ready Infrastructure as Code (IaC) project built using **Terraform**, **AWS ECS Fargate**, **Docker**, **Amazon ECR**, and **GitHub Actions**.
 
-This project automates the deployment of a containerized web application on AWS using Infrastructure as Code (Terraform) and CI/CD (GitHub Actions).
-
-The goal is to eliminate manual production deployments and create a secure, scalable, repeatable deployment pipeline.
+This project demonstrates a complete DevOps workflow by provisioning AWS infrastructure with Terraform modules, deploying a containerized application to Amazon ECS Fargate, automating CI/CD using GitHub Actions, and implementing automatic deployment rollback for high availability.
 
 ---
 
-# 📖 Business Scenario
+# Architecture
 
-A growing e-commerce company was deploying applications manually using SSH.
+> <img width="1536" height="1024" alt="ChatGPT Image Jul 28, 2026, 06_02_11 PM" src="https://github.com/user-attachments/assets/285caf9d-ff25-436f-9848-bf4f4ae26c2b" />
+---
 
-Problems:
+# Project Overview
 
-- Manual deployments
-- Human error
-- Configuration mistake
-- Production outages
-- No rollback capability
+This project provisions an entire AWS infrastructure using Terraform and deploys a Dockerized web application to Amazon ECS Fargate.
 
-The CTO requested:
+The deployment pipeline automatically:
 
-- No manual production deployments
-- Fully automated infrastructure
-- Automated application deployment
-- Rollback capability
-- Infrastructure stored as code
+- Validates Terraform
+- Builds Docker images
+- Pushes images to Amazon ECR
+- Deploys to Amazon ECS
+- Waits for ECS service stability
+- Automatically rolls back if deployment fails
 
-This project solves that problem.
+The infrastructure supports multiple environments using Terraform Workspaces and Remote State stored in Amazon S3 with DynamoDB state locking.
 
 ---
 
-# 🏗 Architecture
+# Project Features
 
-Developer
+- Infrastructure as Code (Terraform)
+- Modular Terraform Design
+- Remote Terraform Backend
+- State Locking using DynamoDB
+- Multiple Environments
+- Terraform Workspaces
+- Dockerized Application
+- Amazon ECS Fargate Deployment
+- Amazon ECR
+- GitHub Actions CI/CD
+- Automatic Rollback Strategy
+- ECS Service Auto Scaling
+- CloudWatch Logging
+- Application Load Balancer
+- IAM Roles
+- Secure Credentials using GitHub Secrets
+- Branch Based Deployments
+- Infrastructure Monitoring
+
+---
+
+# Deliverables Completed
+
+## ✔ Terraform Infrastructure
+
+Provisioned using reusable Terraform modules.
+
+Includes:
+
+- VPC
+- Public Subnets
+- Internet Gateway
+- Route Tables
+- ECS Cluster
+- ECS Fargate Service
+- ECS Task Definition
+- Amazon ECR
+- Application Load Balancer
+- Target Group
+- Security Groups
+- CloudWatch Log Groups
+- IAM Roles
+- Auto Scaling
+
+---
+
+## ✔ Multiple Environments
+
+Implemented using Terraform Workspaces.
+
+```
+Development
+
 ↓
 
-GitHub Repository
-↓
-
-GitHub Actions
+Staging
 
 ↓
 
-Build Docker Image
+Production
+```
+
+Same Terraform code with different configurations.
+
+---
+
+## ✔ CI/CD Pipeline
+
+Implemented using GitHub Actions.
+
+Pipeline Flow
+
+```
+Terraform Checks
+
+↓
+
+Docker Build
 
 ↓
 
@@ -52,317 +115,234 @@ Push Image to Amazon ECR
 
 ↓
 
-Amazon ECS Fargate
+Deploy to Staging
 
 ↓
 
-Application Load Balancer
+Manual Approval
 
 ↓
 
-CloudWatch Logs
+Deploy to Production
 
----
+↓
 
-# 🛠 Technologies Used
+Wait for ECS Stability
 
-- Terraform
-- AWS ECS Fargate
-- Docker
-- Amazon ECR
-- Application Load Balancer
-- CloudWatch
-- IAM
-- Security Groups
-- GitHub Actions
-- GitHub Secrets
-- HTML
-- CSS
-- JavaScript
+↓
 
----
-
-# 📂 Project Structure
-
+Automatic Rollback (if deployment fails)
 ```
+
+> 📷 **Paste your GitHub Actions Pipeline Screenshot here**
+
+---
+
+## ✔ Automatic Rollback
+
+The deployment automatically rolls back when
+
+- ECS deployment becomes unhealthy
+- ECS service does not reach a stable state
+
+Rollback restores the previously running ECS Task Definition.
+
+---
+
+## ✔ Documentation
+
+Included:
+
+- Architecture Diagram
+- Pipeline Flow
+- Setup Guide
+- Deployment Process
+- Runbook
+- AWS Cost Estimate
+
+---
+
+# Technologies Used
+
+| Category | Technology |
+|-----------|------------|
+| Cloud | AWS |
+| IaC | Terraform |
+| Container | Docker |
+| Container Registry | Amazon ECR |
+| Container Platform | ECS Fargate |
+| CI/CD | GitHub Actions |
+| Monitoring | CloudWatch |
+| Networking | VPC, ALB |
+| Security | IAM |
+
+---
+
+# AWS Services Used
+
+| AWS Service | Purpose |
+|-------------|---------|
+| Amazon VPC | Networking |
+| ECS | Container Orchestration |
+| ECS Fargate | Serverless Containers |
+| Amazon ECR | Docker Image Repository |
+| Application Load Balancer | Traffic Distribution |
+| CloudWatch | Logging & Monitoring |
+| IAM | Roles & Permissions |
+| Amazon S3 | Terraform Backend |
+| DynamoDB | Terraform State Locking |
+
+---
+
+# Repository Structure
+
+```text
 infra-as-code-pipeline/
 
 │
-
 ├── app/
-
-│ ├── Dockerfile
-
-│ ├── index.html
-
-│ ├── style.css
-
-│ └── script.js
-
 │
-
 ├── terraform/
-
-│ ├── backend.tf
-
-│ ├── provider.tf
-
-│ ├── main.tf
-
-│ ├── variables.tf
-
-│ ├── outputs.tf
-
-│ └── modules/
-
-│ ├── networking/
-
-│ ├── security/
-
-│ ├── ecr/
-
-│ ├── monitoring/
-
-│ └── compute/
-
 │
-
-└── .github/
-
-└── workflows/
-
-└── deploy.yml
-
+│   ├── backend/
+│
+│   ├── modules/
+│   │
+│   ├── networking/
+│   ├── compute/
+│   ├── security/
+│   └── monitoring/
+│
+│   ├── dev.tfvars
+│   ├── staging.tfvars
+│   └── production.tfvars
+│
+├── .github/
+│
+│   └── workflows/
+│       ├── terraform.yml
+│       ├── staging.yml
+│       └── production.yml
+│
+└── README.md
 ```
 
 ---
 
-# ⚙ Phase 1 – Application
+# Terraform Modules
 
-Created a responsive frontend using:
+## Networking Module
 
-- HTML
-- CSS
-- JavaScript
+Creates
 
-The page simulates a deployment dashboard containing:
-
-- Pipeline Status
-- Deploy Button
-- Deployment Logs
+- VPC
+- Public Subnets
+- Route Tables
+- Internet Gateway
 
 ---
 
-# ⚙ Phase 2 – Docker
+## Compute Module
 
-Containerized the application.
+Creates
 
-Dockerfile
+- ECS Cluster
+- ECS Service
+- ECS Task Definition
 
-```dockerfile
-FROM nginx:alpine
+---
 
-COPY . /usr/share/nginx/html
-```
+## Security Module
 
-Build
+Creates
+
+- IAM Roles
+- Security Groups
+
+---
+
+## Monitoring Module
+
+Creates
+
+- CloudWatch Log Groups
+
+---
+
+# Terraform Backend
+
+Remote backend configured using
+
+- Amazon S3
+- DynamoDB
+
+Benefits
+
+- Shared state
+- Team collaboration
+- State locking
+- Prevents concurrent deployments
+
+---
+
+# Terraform Commands Used
 
 ```bash
-docker build -t ecommerce-app .
-```
+terraform init
 
-Run
+terraform fmt
 
-```bash
-docker run -p 8081:80 ecommerce-app
-```
-
----
-
-# ⚙ Phase 3 – Push Docker Image to Amazon ECR
-
-Created Amazon ECR Repository.
-
-Login
-
-```bash
-aws ecr get-login-password \
-| docker login \
---username AWS \
---password-stdin \
-<ACCOUNT_ID>.dkr.ecr.ap-south-1.amazonaws.com
-```
-
-Tag
-
-```bash
-docker tag ecommerce-app:latest \
-ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecommerce-app:latest
-```
-
-Push
-
-```bash
-docker push ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecommerce-app:latest
-```
-
----
-
-# ⚙ Phase 4 – Terraform Backend
-
-Configured Terraform backend using:
-
-- S3 Bucket
-- State Locking
-
-Files:
-
-- backend.tf
-- provider.tf
-
----
-
-# ⚙ Phase 5 – Networking Module
-
-Provisioned
-
-✔ VPC
-
-✔ Public Subnet 1
-
-✔ Public Subnet 2
-
-✔ Internet Gateway
-
-✔ Route Tables
-
-✔ Route Associations
-
----
-
-# ⚙ Phase 6 – Security Module
-
-Created
-
-- ALB Security Group
-- ECS Security Group
-- IAM Execution Role
-
-Attached
-
-AmazonECSTaskExecutionRolePolicy
-
----
-
-# ⚙ Phase 7 – Monitoring Module
-
-Created
-
-CloudWatch Log Group
-
-Retention
-
-14 Days
-
-Purpose
-
-Store ECS Container Logs
-
----
-
-# ⚙ Phase 8 – ECR Module
-
-Created
-
-Amazon Elastic Container Registry
-
-Enabled
-
-- Image Scan on Push
-
-Repository
-
-```
-ecommerce-app
-```
-
----
-
-# ⚙ Phase 9 – Compute Module
-
-Provisioned
-
-✔ ECS Cluster
-
-✔ ECS Task Definition
-
-✔ ECS Service
-
-✔ Application Load Balancer
-
-✔ Target Group
-
-✔ Listener
-
-✔ Auto Scaling Policy
-
-Deployment Platform
-
-AWS Fargate
-
----
-
-# ⚙ Phase 10 – Terraform Workspaces
-
-Created
-
-```
-terraform workspace new dev
+terraform validate
 
 terraform workspace new staging
 
-terraform workspace new production
+terraform workspace select production
+
+terraform plan
+
+terraform apply
+
+terraform destroy
 ```
 
-Purpose
+Terraform Quality Checks
 
-Same Terraform code
-
-Different environments
-
----
-
-# ⚙ Phase 11 – GitHub Secrets
-
-Configured
-
-AWS_ACCESS_KEY_ID
-
-SECRET_ACCESS_KEY
-
-AWS_REGION
-
-These secrets are securely used inside GitHub Actions.
+- terraform fmt
+- terraform validate
+- TFLint
 
 ---
 
-# ⚙ Phase 12 – GitHub Actions CI/CD
+# CI/CD Workflow
 
-Workflow
+The GitHub Actions workflow performs:
 
-Developer Push
-
-↓
-
-GitHub Actions
-
-↓
-
-Checkout Code
+```
+Checkout Repository
 
 ↓
 
 Configure AWS Credentials
+
+↓
+
+Terraform Init
+
+↓
+
+Terraform Format Check
+
+↓
+
+Terraform Validate
+
+↓
+
+TFLint
+
+↓
+
+Read Terraform Outputs
 
 ↓
 
@@ -378,212 +358,368 @@ Push Docker Image
 
 ↓
 
+Download ECS Task Definition
+
+↓
+
+Render Task Definition
+
+↓
+
 Deploy to ECS
 
-Workflow File
+↓
+
+Wait for ECS Service Stability
+
+↓
+
+Rollback if Required
+
+↓
+
+Deployment Summary
+```
+
+> 📷 **Paste Pipeline Flow Diagram here**
+
+---
+
+# Branch Strategy
 
 ```
-.github/workflows/deploy.yml
+feature/*
+
+↓
+
+Pull Request
+
+↓
+
+Deploy to Staging
+
+↓
+
+Review
+
+↓
+
+Merge to Main
+
+↓
+
+Production Deployment
 ```
 
 ---
 
-# 🌍 Deployment Flow
+# Deployment Rollback Strategy
 
-Developer
+Before deployment
 
-↓
-
-Git Push
-
-↓
-
-GitHub Actions
+```
+Current Task Definition
 
 ↓
 
-Docker Build
+Save Task Definition
 
 ↓
 
-Amazon ECR
+Deploy New Revision
 
 ↓
 
-Amazon ECS Fargate
+Wait for ECS Stability
 
 ↓
 
-Application Load Balancer
+Deployment Failed?
 
 ↓
 
-Public Website
+YES
+
+↓
+
+Rollback to Previous Stable Task Definition
+
+↓
+
+Deployment Restored
+```
+
+Rollback uses
+
+```bash
+aws ecs update-service
+```
+
+to restore the previous task definition automatically.
 
 ---
 
-# 🔐 Security
+# ECS Auto Scaling
 
-- IAM Roles
-- GitHub Secrets
-- Security Groups
-- ECS Task Execution Role
-- No hardcoded AWS credentials
+Configured Auto Scaling
+
+Minimum Tasks
+
+```
+2
+```
+
+Maximum Tasks
+
+```
+6
+```
+
+Scaling Policies
+
+- CPU Utilization
+- Memory Utilization
 
 ---
 
-# 📈 Monitoring
+# Application Load Balancer
 
-CloudWatch Logs
+Configured with
 
-Used for
+- Health Checks
+- Target Groups
+- Listener Rules
+
+---
+
+# CloudWatch Monitoring
+
+CloudWatch is used for
 
 - Container Logs
 - ECS Logs
 - Deployment Monitoring
+- Health Check Monitoring
+
+> 📷 **Paste CloudWatch Screenshot here**
 
 ---
 
-# 📊 Auto Scaling
+# Security
 
-Configured ECS Service Auto Scaling based on CPU utilization.
+Implemented
 
----
+- IAM Roles
+- Security Groups
+- GitHub Secrets
+- Remote Backend Security
+- Least Privilege Access
 
-# 🚀 Features
-
-✔ Infrastructure as Code
-
-✔ Automated CI/CD
-
-✔ Dockerized Application
-
-✔ ECS Fargate Deployment
-
-✔ Load Balancer
-
-✔ Auto Scaling
-
-✔ CloudWatch Logging
-
-✔ GitHub Actions
-
-✔ Secure Credentials
-
-✔ Repeatable Deployments
+Secrets are never stored in source code.
 
 ---
 
-# 🖥 Application
+# Docker
 
-The web application displays
+Docker was used to
 
-- Deployment Dashboard
-- Pipeline Status
-- Deployment Logs
-- Simulated Deploy Button
+- Containerize the application
+- Build images
+- Push images to Amazon ECR
+- Deploy immutable containers
 
-Purpose
-
-To demonstrate a successful DevOps deployment pipeline.
-
----
-
-# 📚 Commands Used
-
-Terraform
-
-```bash
-terraform init
-
-terraform plan
-
-terraform apply
-
-terraform destroy
-```
-
-Docker
+Commands
 
 ```bash
 docker build
-
-docker run
 
 docker tag
 
 docker push
 ```
 
-Git
+---
 
-```bash
-git add .
-
-git commit -m "message"
-
-git push
-```
-
-AWS
+# AWS CLI Commands Used
 
 ```bash
 aws configure
 
-aws ecs list-clusters
+aws ecs describe-services
 
-aws ecr describe-repositories
+aws ecs describe-task-definition
 
-aws ecs list-services
+aws ecs describe-tasks
+
+aws ecs list-task-definitions
+
+aws ecs update-service
+
+aws ecs wait services-stable
+
+aws elbv2 describe-target-health
+
+aws logs tail
+
+aws ecr get-login-password
 ```
 
 ---
 
-# 🎯 Learning Outcomes
+# Setup Instructions
+
+Clone Repository
+
+```bash
+git clone <repository-url>
+```
+
+Initialize Terraform
+
+```bash
+terraform init
+```
+
+Select Workspace
+
+```bash
+terraform workspace select production
+```
+
+Deploy Infrastructure
+
+```bash
+terraform apply
+```
+
+Push Code
+
+GitHub Actions automatically deploys the application.
+
+---
+
+# Common Failure Scenarios (Runbook)
+
+| Issue | Resolution |
+|--------|------------|
+| Terraform Init Failed | Verify S3 Backend |
+| Terraform Lock Error | Check DynamoDB Lock |
+| Docker Build Failed | Verify Dockerfile |
+| ECS Task Failed | Check CloudWatch Logs |
+| ALB Health Check Failed | Verify `/health` endpoint |
+| ECS Deployment Failed | Inspect ECS Events |
+| Rollback Triggered | Previous Task Definition Restored |
+| GitHub Secrets Missing | Configure Repository Secrets |
+
+---
+
+# Estimated AWS Monthly Cost
+
+| Service | Estimated Cost |
+|----------|----------------|
+| ECS Fargate | Low |
+| Amazon ECR | Low |
+| Application Load Balancer | Low |
+| CloudWatch | Low |
+| Amazon S3 | Low |
+| DynamoDB | Low |
+
+> Costs depend on workload and region. AWS Free Tier or promotional credits can significantly reduce charges for learning environments.
+
+---
+
+# Learning Outcomes
 
 Through this project I learned
 
-- Infrastructure as Code using Terraform
-
-- AWS ECS Fargate
-
+- Infrastructure as Code
+- Modular Terraform
+- Terraform Modules
+- Terraform Remote Backend
+- Terraform Workspaces
+- Docker
+- Amazon ECS Fargate
 - Amazon ECR
-
-- Docker Containerization
-
 - GitHub Actions
-
+- ECS Auto Scaling
+- Application Load Balancer
 - CloudWatch Monitoring
-
-- IAM
-
-- Security Groups
-
-- ECS Deployment
-
-- CI/CD Pipeline Automation
+- IAM Roles
+- Infrastructure Automation
+- CI/CD Pipelines
+- Deployment Rollback Strategy
+- Terraform Validate
+- Terraform Format
+- TFLint
+- Remote State Management
+- DynamoDB State Locking
+- Multiple Environment Deployments
+- AWS CLI
+- Branch Based Deployments
+- Production Release Process
 
 ---
-# Outputs
-<img width="925" height="427" alt="image" src="https://github.com/user-attachments/assets/cf253fa6-ac42-4c05-93c4-1edd5699c7c5" />
-<img width="934" height="473" alt="image" src="https://github.com/user-attachments/assets/050a9c8a-f750-4514-98d3-c6478d2060f7" />
 
-<img width="956" height="437" alt="image" src="https://github.com/user-attachments/assets/881c0a03-009e-4001-bedf-583bbc545d1d" />
+# Future Improvements
 
-<img width="920" height="458" alt="image" src="https://github.com/user-attachments/assets/f3551af9-0369-45bd-b737-fe8becb7ab4e" />
-<img width="949" height="449" alt="image" src="https://github.com/user-attachments/assets/3a0923be-1e2b-4c49-a819-2578b26eacc9" />
-<img width="953" height="460" alt="image" src="https://github.com/user-attachments/assets/714c234f-4421-41e0-8df1-a50bf35fa4bb" />
-<img width="941" height="447" alt="image" src="https://github.com/user-attachments/assets/3b6ffd4b-1270-4236-bab4-41f085b158d3" />
+- Blue/Green Deployments
+- Canary Deployments
+- SonarQube Integration
+- Trivy Security Scanning
+- Slack Notifications
+- Prometheus Monitoring
+- Grafana Dashboards
+- Cost Optimization
+- Kubernetes Migration
 
-<img width="944" height="452" alt="image" src="https://github.com/user-attachments/assets/097905c1-704b-4eda-a869-9f40effa721d" />
-<img width="950" height="497" alt="image" src="https://github.com/user-attachments/assets/7c752c7a-e52a-46c9-82c6-826a53dad916" />
-<img width="953" height="430" alt="image" src="https://github.com/user-attachments/assets/1e4c5074-9fc1-4c19-9473-321dcd5f6195" />
+---
 
-# 👨‍💻 Author
+# Project Requirements Completed
 
-Omkar
+## Infrastructure
 
-DevOps Engineer (Learning)
-Approval Test
-Approval Test
-# staging test
+- Terraform Modules
+- Remote Backend
+- ECS Cluster
+- Fargate
+- IAM
+- Security Groups
+- CloudWatch
+- ECR
+- ALB
+
+## CI/CD
+
+- Terraform Validate
+- Terraform fmt
+- TFLint
+- Docker Build
+- Push to ECR
+- ECS Deployment
+- Manual Approval
+- Production Deployment
+- Automatic Rollback
+
+## DevOps Best Practices
+
+- Infrastructure as Code
+- Modular Terraform
+- Multiple Environments
+- Secure Secrets
+- Remote State
+- State Locking
+- Auto Scaling
+- Health Checks
+- Monitoring
+- Logging
+- Branch Based Workflow
+
+---
+
+# Author
+
+**Aakash Sethi**
+
+DevOps Capstone Project
+
+Terraform • AWS • Docker • ECS • GitHub Actions • Infrastructure as Code
