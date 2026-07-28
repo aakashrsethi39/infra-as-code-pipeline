@@ -1,76 +1,231 @@
-name: Deploy to Production
+name: Production Deployment
 
 on:
   push:
     branches:
       - main
 
+permissions:
+  contents: read
+
 env:
-  AWS_REGION: ap-south-1
-  ECR_REPOSITORY: ecommerce-staging
-  ECS_CLUSTER: ecommerce-staging-cluster
-  ECS_SERVICE: ecommerce-staging-service
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  TF_WORKSPACE: production
 
 jobs:
-  production:
+  deploy:
+    name: Deploy to Production
     runs-on: ubuntu-latest
     environment: production
 
-    steps:
-      - uses: actions/checkout@v4
+    defaults:
+      run:
+        working-directory: terraform
 
-      - uses: aws-actions/configure-aws-credentials@v4
+    steps:
+
+      #######################################################
+      # Checkout Repository
+      #######################################################
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      #######################################################
+      # Configure AWS Credentials
+      #######################################################
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - uses: aws-actions/amazon-ecr-login@v2
+      #######################################################
+      # Setup Terraform
+      #######################################################
 
-      - name: Build image
-        run: docker build -t $ECR_REPOSITORY ./app
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      - name: Tag image
+      #######################################################
+      # Terraform Init
+      #######################################################
+
+      - name: Terraform Init
+        run: terraform init
+
+      #######################################################
+      # Terraform Format Check
+      #######################################################
+
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      #######################################################
+      # Terraform Validate
+      #######################################################
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      #######################################################
+      # Setup TFLint
+      #######################################################
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      #######################################################
+      # Run TFLint
+      #######################################################
+
+      - name: Run TFLint
         run: |
-          docker tag $ECR_REPOSITORY:latest \
-          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+          tflint --init
+          tflint
 
-      - name: Push image
+      #######################################################
+      # Read Terraform Outputs
+      #######################################################
+
+      - name: Read Terraform Outputs
+        id: tf
         run: |
-          docker push \
-          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+          echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+          echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
+          echo "task_family=$(terraform output -raw task_definition_family)" >> $GITHUB_OUTPUT
+          echo "container_name=$(terraform output -raw container_name)" >> $GITHUB_OUTPUT
+          echo "repository_url=$(terraform output -raw repository_url)" >> $GITHUB_OUTPUT
+
+      #######################################################
+      # Login to Amazon ECR
+      #######################################################
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      #######################################################
+      # Generate Image Tag
+      #######################################################
+
+      - name: Generate Image Tag
+        run: |
+          echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      #######################################################
+      # Build Docker Image
+      #######################################################
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ steps.tf.outputs.repository_url }}:${IMAGE_TAG} \
+            -t ${{ steps.tf.outputs.repository_url }}:latest \
+            ../app
+
+      #######################################################
+      # Push Docker Images
+      #######################################################
+
+      - name: Push Docker Images
+        run: |
+          docker push ${{ steps.tf.outputs.repository_url }}:${IMAGE_TAG}
+          docker push ${{ steps.tf.outputs.repository_url }}:latest
+
+      #######################################################
+      # Download Current Task Definition
+      #######################################################
+
+      - name: Download Task Definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ steps.tf.outputs.task_family }} \
+            --query taskDefinition \
+            > task-definition.json
+
+      #######################################################
+      # Render Updated Task Definition
+      #######################################################
+
+      - name: Render Task Definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: task-definition.json
+          container-name: ${{ steps.tf.outputs.container_name }}
+          image: ${{ steps.tf.outputs.repository_url }}:${{ env.IMAGE_TAG }}
+
+      #######################################################
+      # Deploy to ECS
+      #######################################################
 
       - name: Deploy to ECS
         id: deploy
-        run: |
-          aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
-            --force-new-deployment \
-            --region $AWS_REGION
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ steps.tf.outputs.service_name }}
+          cluster: ${{ steps.tf.outputs.cluster_name }}
+          wait-for-service-stability: false
+
+      #######################################################
+      # Wait for Deployment
+      #######################################################
 
       - name: Wait for Deployment
         id: wait
-        continue-on-error: true
         run: |
-          aws ecs wait services-stable \
-            --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE \
-            --region $AWS_REGION
+          echo "Waiting for ECS deployment..."
+
+          for i in {1..60}; do
+
+            RUNNING=$(aws ecs describe-services \
+              --cluster ${{ steps.tf.outputs.cluster_name }} \
+              --services ${{ steps.tf.outputs.service_name }} \
+              --query "services[0].runningCount" \
+              --output text)
+
+            DESIRED=$(aws ecs describe-services \
+              --cluster ${{ steps.tf.outputs.cluster_name }} \
+              --services ${{ steps.tf.outputs.service_name }} \
+              --query "services[0].desiredCount" \
+              --output text)
+
+            PENDING=$(aws ecs describe-services \
+              --cluster ${{ steps.tf.outputs.cluster_name }} \
+              --services ${{ steps.tf.outputs.service_name }} \
+              --query "services[0].pendingCount" \
+              --output text)
+
+            echo "Running=$RUNNING Desired=$DESIRED Pending=$PENDING"
+
+            if [ "$RUNNING" = "$DESIRED" ] && [ "$PENDING" = "0" ]; then
+              echo "Deployment successful."
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "Deployment timed out."
+          exit 1
+
+      #######################################################
+      # Rollback
+      #######################################################
 
       - name: Rollback
-        if: steps.wait.outcome == 'failure'
+        if: failure()
         run: |
-          echo "Deployment failed. Finding previous working task definition..."
+          echo "Deployment failed. Rolling back..."
 
           CURRENT=$(aws ecs describe-services \
-            --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE \
-            --region $AWS_REGION \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }} \
             --query "services[0].taskDefinition" \
             --output text)
-
-          echo "Current Task Definition: $CURRENT"
 
           FAMILY=$(basename "$CURRENT" | cut -d':' -f1)
 
@@ -78,27 +233,35 @@ jobs:
             --family-prefix $FAMILY \
             --status ACTIVE \
             --sort DESC \
-            --region $AWS_REGION \
             --query "taskDefinitionArns[1]" \
             --output text)
 
           if [ "$PREVIOUS" = "None" ] || [ -z "$PREVIOUS" ]; then
-            echo "No previous ACTIVE task definition found."
+            echo "No previous task definition found."
             exit 1
           fi
 
           echo "Rolling back to $PREVIOUS"
 
           aws ecs update-service \
-            --cluster $ECS_CLUSTER \
-            --service $ECS_SERVICE \
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --service ${{ steps.tf.outputs.service_name }} \
             --task-definition $PREVIOUS \
-            --force-new-deployment \
-            --region $AWS_REGION
+            --force-new-deployment
 
           aws ecs wait services-stable \
-            --cluster $ECS_CLUSTER \
-            --services $ECS_SERVICE \
-            --region $AWS_REGION
+            --cluster ${{ steps.tf.outputs.cluster_name }} \
+            --services ${{ steps.tf.outputs.service_name }}
 
-          echo "Rollback completed successfully."
+      #######################################################
+      # Deployment Summary
+      #######################################################
+
+      - name: Deployment Summary
+        if: success()
+        run: |
+          echo "Production Deployment Completed Successfully"
+          echo "Cluster     : ${{ steps.tf.outputs.cluster_name }}"
+          echo "Service     : ${{ steps.tf.outputs.service_name }}"
+          echo "Repository  : ${{ steps.tf.outputs.repository_url }}"
+          echo "Image Tag   : ${IMAGE_TAG}"

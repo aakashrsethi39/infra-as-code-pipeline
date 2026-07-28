@@ -10,4 +10,12 @@ resource "aws_ecr_repository" "app" {
 
   force_delete = true
 
+  tags = {
+    Name        = "ecommerce-${var.environment}"
+    Environment = var.environment
+    Project     = "ecommerce"
+    ManagedBy   = "Terraform"
+  }
+
+
 }

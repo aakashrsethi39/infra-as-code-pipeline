@@ -6,6 +6,8 @@ module "networking" {
 
   vpc_cidr = var.vpc_cidr
 
+  environment = terraform.workspace
+
 }
 module "security" {
 
@@ -25,10 +27,9 @@ module "monitoring" {
 
   source = "./modules/monitoring"
 
-  log_group_name = "/ecs/ecommerce"
+  log_group_name = "/ecs/ecommerce-${terraform.workspace}"
 
   retention_days = 14
-
 }
 
 module "compute" {
