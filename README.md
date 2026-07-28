@@ -81,10 +81,6 @@ Includes:
 Implemented using Terraform Workspaces.
 
 ```
-Development
-
-↓
-
 Staging
 
 ↓
@@ -133,9 +129,6 @@ Wait for ECS Stability
 
 Automatic Rollback (if deployment fails)
 ```
-
-> 📷 **Paste your GitHub Actions Pipeline Screenshot here**
-
 ---
 
 ## ✔ Automatic Rollback
@@ -147,6 +140,7 @@ The deployment automatically rolls back when
 
 Rollback restores the previously running ECS Task Definition.
 
+> <img width="1074" height="604" alt="image" src="https://github.com/user-attachments/assets/cd920821-811f-4262-ac8c-fcee3987bf38" />
 ---
 
 ## ✔ Documentation
@@ -213,14 +207,9 @@ infra-as-code-pipeline/
 │   ├── security/
 │   └── monitoring/
 │
-│   ├── dev.tfvars
-│   ├── staging.tfvars
-│   └── production.tfvars
-│
 ├── .github/
 │
 │   └── workflows/
-│       ├── terraform.yml
 │       ├── staging.yml
 │       └── production.yml
 │
@@ -229,9 +218,72 @@ infra-as-code-pipeline/
 
 ---
 
-# Terraform Modules
+# Project Phases
 
-## Networking Module
+## Phase 1 – Frontend Application
+
+> <img width="1057" height="594" alt="image" src="https://github.com/user-attachments/assets/53a35a2d-6b0b-4d2c-83ef-9a443d410c58" />
+
+---
+
+## Phase 2 – Docker
+
+Containerized the Flask application .
+
+Dockerfile
+
+Build Image
+
+```bash
+docker build -t production-app .
+```
+---
+
+## Phase 3 – Amazon ECR
+
+Created separate ECR repositories for different environments.
+
+Repositories
+
+- ecommerce-staging
+- ecommerce-production
+
+Authentication
+
+```bash
+aws ecr get-login-password \
+| docker login \
+--username AWS \
+--password-stdin ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com
+```
+
+Push Image
+
+```bash
+docker tag ecommerce-app:latest ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecommerce-default:latest
+
+docker push ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecommerce-default:latest
+```
+
+---
+
+## Phase 4 – Terraform Backend
+
+Configured remote backend using the bootstrap directory first to create 
+
+- Amazon S3
+- DynamoDB State Locking
+
+Benefits
+
+- Shared State
+- Remote Storage
+- State Locking
+- Team Collaboration
+
+---
+
+## Phase 5 - Networking Module
 
 Creates
 
@@ -242,7 +294,7 @@ Creates
 
 ---
 
-## Compute Module
+## Phase 6 - Compute Module
 
 Creates
 
@@ -252,7 +304,7 @@ Creates
 
 ---
 
-## Security Module
+## Phase 7 - Security Module
 
 Creates
 
@@ -261,29 +313,22 @@ Creates
 
 ---
 
-## Monitoring Module
+## Phase 8 - Monitoring Module
 
 Creates
 
 - CloudWatch Log Groups
 
 ---
+## Phase 9 – Terraform Workspaces
 
-# Terraform Backend
+Created
 
-Remote backend configured using
+```bash
 
-- Amazon S3
-- DynamoDB
-
-Benefits
-
-- Shared state
-- Team collaboration
-- State locking
-- Prevents concurrent deployments
-
----
+terraform workspace new staging
+terraform workspace new production
+```
 
 # Terraform Commands Used
 
@@ -381,37 +426,6 @@ Rollback if Required
 Deployment Summary
 ```
 
-> 📷 **Paste Pipeline Flow Diagram here**
-
----
-
-# Branch Strategy
-
-```
-feature/*
-
-↓
-
-Pull Request
-
-↓
-
-Deploy to Staging
-
-↓
-
-Review
-
-↓
-
-Merge to Main
-
-↓
-
-Production Deployment
-```
-
----
 
 # Deployment Rollback Strategy
 
@@ -592,7 +606,16 @@ Deploy Infrastructure
 terraform apply
 ```
 
-Push Code
+Push Code from feature branch to staging branch and Click on new pull request and merge
+> <img width="602" height="338" alt="image" src="https://github.com/user-attachments/assets/41af93ac-3fb7-42d7-9b8f-7beef36c6c4d" />
+
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/bbf66689-4b4f-42f2-a092-5f93b86f0f8c" />
+
+Push Code from staging branch to main branch and approve 
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/8a02b420-7ecb-4d2b-a046-8cc032a6f953" />
+
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/3f4e51e9-f691-4ec8-b19c-bcf6e8c403db" />
+
 
 GitHub Actions automatically deploys the application.
 
@@ -719,6 +742,32 @@ Through this project I learned
 # Author
 
 **Aakash Sethi**
+
+Output :- 
+
+> <img width="1177" height="466" alt="image" src="https://github.com/user-attachments/assets/2e43b408-b569-4fb0-bdc8-13962bcedbd6" />
+
+> <img width="1067" height="558" alt="image" src="https://github.com/user-attachments/assets/600118ce-8600-4a06-a6c0-0b2f8f3b56aa" />
+
+> <img width="1057" height="594" alt="image" src="https://github.com/user-attachments/assets/53a35a2d-6b0b-4d2c-83ef-9a443d410c58" />
+
+> <img width="1175" height="467" alt="image" src="https://github.com/user-attachments/assets/1561517a-d313-472b-b714-3cb24d204bcf" />
+
+> <img width="1687" height="502" alt="image" src="https://github.com/user-attachments/assets/89ca3bbb-6da8-4ba6-ba7c-00d43c20df16" />
+
+> <img width="1062" height="420" alt="image" src="https://github.com/user-attachments/assets/addc7dfd-1be7-49a4-8951-f25f399cbb90" />
+
+> <img width="1615" height="767" alt="image" src="https://github.com/user-attachments/assets/b6e003e4-c8e9-4f54-ac84-ae5a3ae34b02" />
+
+> <img width="1637" height="720" alt="image" src="https://github.com/user-attachments/assets/272d4613-d3c2-4036-ab44-acd5ef231973" />
+
+> <img width="1380" height="746" alt="image" src="https://github.com/user-attachments/assets/5e92b471-fb48-4949-920f-9868a543de5d" />
+
+> <img width="1530" height="671" alt="image" src="https://github.com/user-attachments/assets/860ddfde-9ffb-4cf0-8541-e0b8e1fac14e" />
+
+> <img width="1128" height="327" alt="image" src="https://github.com/user-attachments/assets/94a03e62-c039-4d3e-977c-a3e772e420c5" />
+
+
 
 DevOps Capstone Project
 
