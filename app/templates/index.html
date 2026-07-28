@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>CloudOps Dashboard - Pipeline Test</title>
+
+<style>
+
+body{
+    margin:0;
+    font-family:Arial,Helvetica,sans-serif;
+    background:#1f2937;
+    color:white;
+}
+
+.container{
+    width:90%;
+    max-width:1000px;
+    margin:40px auto;
+}
+
+h1{
+    text-align:center;
+}
+
+.subtitle{
+    text-align:center;
+    color:#cbd5e1;
+    margin-bottom:30px;
+}
+
+.cards{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:20px;
+}
+
+.card{
+    background:#374151;
+    border-radius:10px;
+    padding:20px;
+    text-align:center;
+}
+
+.card h3{
+    margin-bottom:15px;
+}
+
+.ok{
+    color:#22c55e;
+    font-weight:bold;
+}
+
+.warning{
+    color:#f59e0b;
+    font-weight:bold;
+}
+
+button{
+    display:block;
+    margin:40px auto;
+    padding:15px 35px;
+    border:none;
+    border-radius:8px;
+    background:#ff9900;
+    color:white;
+    font-size:16px;
+    cursor:pointer;
+}
+
+button:hover{
+    background:#ffb84d;
+}
+
+.logs{
+    background:#374151;
+    padding:20px;
+    border-radius:10px;
+}
+
+.logs ul{
+    padding-left:20px;
+}
+
+footer{
+    text-align:center;
+    margin-top:30px;
+    color:#94a3b8;
+}
+
+</style>
+
+</head>
+
+<body>
+
+<div class="container">
+
+<h1>🚀 CloudOps Deployment Dashboard</h1>
+
+<p class="subtitle">
+Terraform • Docker • Amazon ECS • GitHub Actions
+</p>
+
+<div class="cards">
+
+<div class="card">
+<h3>Terraform</h3>
+<p class="ok">✔ Applied</p>
+</div>
+
+<div class="card">
+<h3>Docker</h3>
+<p class="ok">✔ Running</p>
+</div>
+
+<div class="card">
+<h3>Amazon ECR</h3>
+<p class="ok">✔ Image Ready</p>
+</div>
+
+<div class="card">
+<h3>Amazon ECS</h3>
+<p class="ok">✔ Healthy</p>
+</div>
+
+<div class="card">
+<h3>Environment</h3>
+<p class="warning">STAGING</p>
+</div>
+
+<div class="card">
+<h3>Pipeline</h3>
+<p class="ok" id="pipeline">✔ Success</p>
+</div>
+
+</div>
+
+<button onclick="deploy()">🚀 Deploy New Version</button>
+
+<div class="logs">
+
+<h2>Deployment Logs</h2>
+
+<ul id="logs">
+<li>Application Started...</li>
+</ul>
+
+</div>
+
+<footer>
+
+Powered by Flask • Docker • Terraform • GitHub Actions • AWS ECS
+
+</footer>
+
+</div>
+
+<script>
+
+function deploy(){
+
+let logs=document.getElementById("logs");
+
+logs.innerHTML="";
+
+const messages=[
+"Building Docker Image...",
+"Pushing Image to Amazon ECR...",
+"Updating ECS Service...",
+"Running Health Checks...",
+"Deployment Successful ✔"
+];
+
+messages.forEach((msg,index)=>{
+
+setTimeout(()=>{
+
+let li=document.createElement("li");
+li.innerHTML=msg;
+logs.appendChild(li);
+
+},index*1000);
+
+});
+
+}
+
+</script>
+
+</body>
+</html>
