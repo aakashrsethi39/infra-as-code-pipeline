@@ -559,23 +559,24 @@ aws configure
 
 aws ecs describe-services
 
+aws ecs update-service
+
 aws ecs describe-task-definition
 
 aws ecs describe-tasks
 
 aws ecs list-task-definitions
 
-aws ecs update-service
-
-aws ecs wait services-stable
-
 aws elbv2 describe-target-health
 
-aws logs tail
-
-aws ecr get-login-password
-
 aws elbv2 describe-load-balancers
+
+aws ecr list-images --repository-name application
+
+aws ecr describe-repositories
+
+aws elbv2 describe-target-groups
+
 ```
 
 ---
