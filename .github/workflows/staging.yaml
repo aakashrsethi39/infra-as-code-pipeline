@@ -1,62 +1,169 @@
-name: Deploy to Staging
+name: Staging Deployment
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - staging
+
+permissions:
+  contents: read
 
 env:
-  AWS_REGION: ap-south-1
-  ECR_REPOSITORY: ecommerce-default
-  ECS_CLUSTER: ecommerce-default-cluster
-  ECS_SERVICE: ecommerce-service
+  AWS_REGION: ${{ secrets.AWS_REGION }}
+  TF_WORKSPACE: staging
 
 jobs:
-  staging:
+  deploy:
+    name: Deploy to Staging
     runs-on: ubuntu-latest
     environment: staging
 
-    steps:
-      - uses: actions/checkout@v4
-      - name: Check Secrets
-        run: |
-          echo "Access key present: ${{ secrets.AWS_ACCESS_KEY_ID != '' }}"
-          echo "Secret key present: ${{ secrets.AWS_SECRET_ACCESS_KEY != '' }}"
-          echo "Region: ${{ secrets.AWS_REGION }}"
+    defaults:
+      run:
+        working-directory: terraform
 
-      - uses: aws-actions/configure-aws-credentials@v4
+    steps:
+
+      #######################################################
+      # Checkout Repository
+      #######################################################
+
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      #######################################################
+      # Configure AWS Credentials
+      #######################################################
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ secrets.AWS_REGION }}
 
-      - uses: hashicorp/setup-terraform@v3
+      #######################################################
+      # Setup Terraform
+      #######################################################
 
-      - run: terraform -chdir=terraform init
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
 
-      - run: terraform -chdir=terraform validate
+      - name: Terraform Init
+        run: terraform init
 
-      - uses: terraform-linters/setup-tflint@v4
+      - name: Select Workspace
+        run: terraform workspace select $TF_WORKSPACE
 
-      - run: |
-          cd terraform
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+
+      - name: Terraform Validate
+        run: terraform validate
+
+      #######################################################
+      # TFLint
+      #######################################################
+
+      - name: Setup TFLint
+        uses: terraform-linters/setup-tflint@v4
+
+      - name: Run TFLint
+        run: |
           tflint --init
           tflint
 
-      - uses: aws-actions/amazon-ecr-login@v2
+      #######################################################
+      # Read Terraform Outputs
+      #######################################################
 
-      - run: docker build -t $ECR_REPOSITORY ./app
+      - name: Read Terraform Outputs
+        id: tf
+        run: |
+          echo "cluster_name=$(terraform output -raw cluster_name)" >> $GITHUB_OUTPUT
+          echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
+          echo "task_family=$(terraform output -raw task_definition_family)" >> $GITHUB_OUTPUT
+          echo "container_name=$(terraform output -raw container_name)" >> $GITHUB_OUTPUT
+          echo "repository_url=$(terraform output -raw repository_url)" >> $GITHUB_OUTPUT
 
-      - run: |
-          docker tag $ECR_REPOSITORY:latest \
-          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+      #######################################################
+      # Login to Amazon ECR
+      #######################################################
 
-      - run: |
-          docker push \
-          343980058896.dkr.ecr.ap-south-1.amazonaws.com/$ECR_REPOSITORY:latest
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
 
-      - run: |
-          aws ecs update-service \
-          --cluster $ECS_CLUSTER \
-          --service $ECS_SERVICE \
-          --force-new-deployment
+      #######################################################
+      # Generate Image Tag
+      #######################################################
+
+      - name: Generate Image Tag
+        run: |
+          echo "IMAGE_TAG=${GITHUB_SHA}" >> $GITHUB_ENV
+
+      #######################################################
+      # Build Docker Image
+      #######################################################
+
+      - name: Build Docker Image
+        run: |
+          docker build \
+            -t ${{ steps.tf.outputs.repository_url }}:${IMAGE_TAG} \
+            -t ${{ steps.tf.outputs.repository_url }}:latest \
+            ../app
+
+      #######################################################
+      # Push Docker Images
+      #######################################################
+
+      - name: Push Docker Images
+        run: |
+          docker push ${{ steps.tf.outputs.repository_url }}:${IMAGE_TAG}
+          docker push ${{ steps.tf.outputs.repository_url }}:latest
+
+      #######################################################
+      # Download Current ECS Task Definition
+      #######################################################
+
+      - name: Download Task Definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition ${{ steps.tf.outputs.task_family }} \
+            --query taskDefinition \
+            > task-definition.json
+
+      #######################################################
+      # Render Updated Task Definition
+      #######################################################
+
+      - name: Render Task Definition
+        id: render
+        uses: aws-actions/amazon-ecs-render-task-definition@v1
+        with:
+          task-definition: terraform/task-definition.json
+          container-name: ${{ steps.tf.outputs.container_name }}
+          image: ${{ steps.tf.outputs.repository_url }}:${{ env.IMAGE_TAG }}
+
+      #######################################################
+      # Deploy to ECS
+      #######################################################
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@v2
+        with:
+          task-definition: ${{ steps.render.outputs.task-definition }}
+          service: ${{ steps.tf.outputs.service_name }}
+          cluster: ${{ steps.tf.outputs.cluster_name }}
+          wait-for-service-stability: true
+
+      #######################################################
+      # Deployment Summary
+      #######################################################
+
+      - name: Deployment Summary
+        run: |
+          echo "Staging Deployment Completed Successfully"
+          echo "Cluster : ${{ steps.tf.outputs.cluster_name }}"
+          echo "Service : ${{ steps.tf.outputs.service_name }}"
+          echo "Repository : ${{ steps.tf.outputs.repository_url }}"
+          echo "Image Tag : ${IMAGE_TAG}"

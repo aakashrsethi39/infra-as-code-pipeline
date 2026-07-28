@@ -1,14 +1,14 @@
 resource "aws_security_group" "ecs_sg" {
 
-  name        = "ecs-security-group"
+  name        = "ecs-security-group-${var.environment}"
   description = "Allow traffic from ALB"
   vpc_id      = var.vpc_id
 
   ingress {
 
-    from_port = 80
+    from_port = 3000
 
-    to_port = 80
+    to_port = 3000
 
     protocol = "tcp"
 
@@ -31,7 +31,7 @@ resource "aws_security_group" "ecs_sg" {
 }
 resource "aws_security_group" "alb_sg" {
 
-  name = "alb-security-group"
+  name = "alb-security-group-${var.environment}"
 
   description = "Allow HTTP"
 
@@ -64,7 +64,7 @@ resource "aws_security_group" "alb_sg" {
 }
 resource "aws_iam_role" "ecs_execution_role" {
 
-  name = "ecsTaskExecutionRole"
+  name = "ecsTaskExecutionRole-${var.environment}"
 
   assume_role_policy = jsonencode({
 
