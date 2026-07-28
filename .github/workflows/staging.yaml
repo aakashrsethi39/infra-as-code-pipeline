@@ -1,9 +1,9 @@
 name: Staging Deployment
 
 on:
-  push:
+  pull_request:
     branches:
-      - staging
+      - main
 
 permissions:
   contents: read
