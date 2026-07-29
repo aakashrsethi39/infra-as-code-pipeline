@@ -99,35 +99,75 @@ Implemented using GitHub Actions.
 Pipeline Flow
 
 ```
-Terraform Checks
+Checkout
 
 ↓
 
-Docker Build
+Configure AWS
 
 ↓
 
-Push Image to Amazon ECR
+Terraform Init
 
 ↓
 
-Deploy to Staging
+Terraform Validate
 
 ↓
 
-Manual Approval
+Terraform fmt
 
 ↓
 
-Deploy to Production
+TFLint
 
 ↓
 
-Wait for ECS Stability
+Read Outputs
 
 ↓
 
-Automatic Rollback (if deployment fails)
+Login ECR
+
+↓
+
+Build Docker Image
+
+↓
+
+Push Image
+
+↓
+
+Download Task Definition
+
+↓
+
+Render Task Definition
+
+↓
+
+Save Current Task Definition
+
+↓
+
+Deploy ECS
+
+↓
+
+Wait
+
+↓
+
+Health Check
+
+↓
+
+Rollback if needed
+
+↓
+
+Summary
 ```
 ---
 
