@@ -247,13 +247,48 @@ infra-as-code-pipeline/
 
 # Project Phases
 
-## Phase 1 – Frontend Application
+## Phase 1 - Clone Repository
 
-> <img width="1057" height="594" alt="image" src="https://github.com/user-attachments/assets/53a35a2d-6b0b-4d2c-83ef-9a443d410c58" />
+```bash
+git clone https://github.com/<your-username>/infra-as-code-pipeline.git
 
+cd infra-as-code-pipeline
+```
 ---
 
-## Phase 2 – Docker
+## Phase 2 - Create the Bootstrap Infrastructure
+
+```bash
+cd bootstrap
+
+terraform init
+
+terraform apply
+```
+---
+
+## Phase 3 - Create infrastructure for Staging environment 
+
+```bash
+cd ..
+terraform workspace new staging
+terraform init
+terraform plan
+terraform apply
+```
+---
+## Phase 4 - Create infrastructure for Production environment 
+
+```bash
+
+terraform workspace new production
+terraform init
+terraform plan
+terraform apply
+```
+---
+
+## Phase 5 – Docker
 
 Containerized the Flask application .
 
@@ -657,40 +692,83 @@ aws elbv2 describe-target-groups
 
 # Setup Instructions
 
-Clone Repository
+Build Docker Image 
 
 ```bash
-git clone https://github.com/<your-username>/infra-as-code-pipeline.git
-
-cd infra-as-code-pipeline
+docker build -t application .
 ```
-Create the Bootstrap Infrastructure
-```bash
-cd bootstrap
-
-terraform init
-
-terraform apply
-```
-
-Create infrastructure for Staging environment 
+Push Image to Amazon ECR
 
 ```bash
-cd ..
-terraform workspace new staging
-terraform init
-terraform plan
-terraform apply
+aws ecr get-login-password \
+| docker login \
+--username AWS \
+--password-stdin <repository-url>
+
+docker tag application:latest repository:latest
+
+docker push repository:latest
 ```
-Create infrastructure for Production environment 
+Configure GitHub Secrets
 
 ```bash
 
-terraform workspace new staging
-terraform init
-terraform plan
-terraform apply
+AWS_ACCESS_KEY_ID
+
+AWS_SECRET_ACCESS_KEY
+
+AWS_REGION
+
 ```
+Configure Production Environment Protection
+create 2 environments in github named staging and production
+
+Add the same to environment secrets in each environment
+```bash
+
+AWS_ACCESS_KEY_ID
+
+AWS_SECRET_ACCESS_KEY
+
+AWS_REGION
+
+```
+
+GitHub
+
+Settings
+
+↓
+
+Environments
+
+↓
+
+Production
+
+Configure
+
+- Required Reviewers
+- Manual Approval
+
+This ensures production deployments require approval.
+
+
+Implement Branch-Based Deployment
+
+```bash
+git branch feature/pipeline
+```
+Push code to staging branch
+merge to staging branch
+
+trigers the staging Deployment
+
+Push code to main branch
+merge to main
+Approve the merge
+Trigers the Production Deployment
+
 
 
 Push Code from feature branch to staging branch and Click on new pull request and merge
