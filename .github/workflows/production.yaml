@@ -60,9 +60,18 @@ jobs:
       # Select Production Workspace
       #######################################################
 
-      - name: Select Terraform Workspace
+      - name: Verify Terraform Workspace
         run: |
-          terraform workspace select production
+          echo "Current workspace:"
+          terraform workspace show
+          
+      - name: List Workspaces
+        run: |
+          terraform workspace list
+
+      - name: Show Terraform Outputs
+        run: |
+          terraform output
 
       #######################################################
       # Verify Workspace
