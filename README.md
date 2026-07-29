@@ -183,19 +183,6 @@ Rollback restores the previously running ECS Task Definition.
 > <img width="1074" height="604" alt="image" src="https://github.com/user-attachments/assets/cd920821-811f-4262-ac8c-fcee3987bf38" />
 ---
 
-## ✔ Documentation
-
-Included:
-
-- Architecture Diagram
-- Pipeline Flow
-- Setup Guide
-- Deployment Process
-- Runbook
-- AWS Cost Estimate
-
----
-
 # Technologies Used
 
 | Category | Technology |
@@ -238,7 +225,7 @@ infra-as-code-pipeline/
 │
 ├── terraform/
 │
-│   ├── backend/
+│   ├── bootstrap/
 │
 │   ├── modules/
 │   │
@@ -398,72 +385,119 @@ Terraform Quality Checks
 
 ---
 
-# CI/CD Workflow
-
-The GitHub Actions workflow performs:
+# Final Project Workflow
 
 ```
-Checkout Repository
+Developer
 
-↓
+        │
 
-Configure AWS Credentials
+        ▼
 
-↓
+Feature Branch
 
-Terraform Init
+        │
 
-↓
+        ▼
 
-Terraform Format Check
+Pull Request
 
-↓
+        │
 
-Terraform Validate
+        ▼
 
-↓
+GitHub Actions (Staging)
 
-TFLint
+        │
 
-↓
+        ▼
 
-Read Terraform Outputs
+Terraform Checks
+(fmt → validate → tflint)
 
-↓
+        │
 
-Login to Amazon ECR
+        ▼
 
-↓
+Docker Build
 
-Build Docker Image
+        │
 
-↓
+        ▼
 
-Push Docker Image
+Push to Amazon ECR
 
-↓
+        │
 
-Download ECS Task Definition
+        ▼
 
-↓
+Deploy to ECS Staging
 
-Render Task Definition
+        │
 
-↓
+        ▼
 
-Deploy to ECS
+Application Testing
 
-↓
+        │
 
-Wait for ECS Service Stability
+        ▼
 
-↓
+Merge into Main
 
-Rollback if Required
+        │
 
-↓
+        ▼
 
-Deployment Summary
+GitHub Actions (Production)
+
+        │
+
+        ▼
+
+Terraform Checks
+
+        │
+
+        ▼
+
+Docker Build
+
+        │
+
+        ▼
+
+Push to ECR
+
+        │
+
+        ▼
+
+Update ECS Task Definition
+
+        │
+
+        ▼
+
+Deploy ECS Service
+
+        │
+
+        ▼
+
+Wait for Service Stability
+
+        │
+
+        ▼
+
+Success?
+      /        \
+    Yes        No
+     │          │
+     ▼          ▼
+ Deployment   Rollback to Previous
+ Successful   Stable Task Definition
 ```
 
 
@@ -626,26 +660,38 @@ aws elbv2 describe-target-groups
 Clone Repository
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/<your-username>/infra-as-code-pipeline.git
+
+cd infra-as-code-pipeline
 ```
-
-Initialize Terraform
-
+Create the Bootstrap Infrastructure
 ```bash
+cd bootstrap
+
 terraform init
-```
 
-Select Workspace
-
-```bash
-terraform workspace select production
-```
-
-Deploy Infrastructure
-
-```bash
 terraform apply
 ```
+
+Create infrastructure for Staging environment 
+
+```bash
+cd ..
+terraform workspace new staging
+terraform init
+terraform plan
+terraform apply
+```
+Create infrastructure for Production environment 
+
+```bash
+
+terraform workspace new staging
+terraform init
+terraform plan
+terraform apply
+```
+
 
 Push Code from feature branch to staging branch and Click on new pull request and merge
 > <img width="602" height="338" alt="image" src="https://github.com/user-attachments/assets/41af93ac-3fb7-42d7-9b8f-7beef36c6c4d" />
