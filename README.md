@@ -171,18 +171,6 @@ Summary
 ```
 ---
 
-## ✔ Automatic Rollback
-
-The deployment automatically rolls back when
-
-- ECS deployment becomes unhealthy
-- ECS service does not reach a stable state
-
-Rollback restores the previously running ECS Task Definition.
-
-> <img width="1074" height="604" alt="image" src="https://github.com/user-attachments/assets/cd920821-811f-4262-ac8c-fcee3987bf38" />
----
-
 # Technologies Used
 
 | Category | Technology |
@@ -250,7 +238,7 @@ infra-as-code-pipeline/
 ## Phase 1 - Clone Repository
 
 ```bash
-git clone https://github.com/<your-username>/infra-as-code-pipeline.git
+git clone https://github.com/aakashrsethi39/infra-as-code-pipeline.git
 
 cd infra-as-code-pipeline
 ```
@@ -258,6 +246,12 @@ cd infra-as-code-pipeline
 
 ## Phase 2 - Create the Bootstrap Infrastructure
 
+Terraform cannot store its own state in an S3 bucket that does not yet exist.
+
+A separate bootstrap directory is used to create:
+-S3 Bucket
+- DynamoDB Table
+- 
 ```bash
 cd bootstrap
 
@@ -265,30 +259,88 @@ terraform init
 
 terraform apply
 ```
+Purpose
+
+- Remote Terraform State
+- State Locking
+- Team Collaboration
 ---
 
-## Phase 3 - Create infrastructure for Staging environment 
+## Phase 3 — Create Terraform Modules
+
+Infrastructure is divided into reusable modules.
+```bash
+terraform/
+
+modules/
+
+    networking/
+
+    security/
+
+    compute/
+
+    monitoring/
+```
+
+Networking Module
+Creates
+
+- VPC
+- Public Subnets
+- Private Subnets
+- Internet Gateway
+- Route Tables
+
+Security Module
+Creates
+- Security Groups
+
+For
+- ECS
+- ALB
+
+Compute Module
+Creates
+
+- ECS Cluster
+- ECS Service
+- ECS Task Definition
+- ECR Repository
+- ALB
+- Target Group
+- Listener
+
+Monitoring Module
+Creates
+- CloudWatch Log Groups
+---
+## Phase 4 - Deploy Staging Infrastructure 
 
 ```bash
-cd ..
+cd terraform
 terraform workspace new staging
+terraform workspace list
+terraform workspace select staging
 terraform init
 terraform plan
 terraform apply
 ```
 ---
-## Phase 4 - Create infrastructure for Production environment 
+## Phase 5 - Deploy Production Infrastructure
 
 ```bash
 
 terraform workspace new production
+terraform workspace list
+terraform workspace select production
 terraform init
 terraform plan
 terraform apply
 ```
 ---
 
-## Phase 5 – Docker
+## Phase 6 – Build Docker Image
 
 Containerized the Flask application .
 
@@ -301,7 +353,7 @@ docker build -t production-app .
 ```
 ---
 
-## Phase 3 – Amazon ECR
+## Phase 7 – Amazon ECR
 
 Created separate ECR repositories for different environments.
 
@@ -326,217 +378,96 @@ docker tag ecommerce-app:latest ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecom
 
 docker push ACCOUNT_ID.dkr.ecr.ap-south-1.amazonaws.com/ecommerce-default:latest
 ```
-
 ---
 
-## Phase 4 – Terraform Backend
+## Phase 8 – Configure GitHub Secrets
 
-Configured remote backend using the bootstrap directory first to create 
-
-- Amazon S3
-- DynamoDB State Locking
-
-Benefits
-
-- Shared State
-- Remote Storage
-- State Locking
-- Team Collaboration
-
----
-
-## Phase 5 - Networking Module
-
-Creates
-
-- VPC
-- Public Subnets
-- Route Tables
-- Internet Gateway
-
----
-
-## Phase 6 - Compute Module
-
-Creates
-
-- ECS Cluster
-- ECS Service
-- ECS Task Definition
-
----
-
-## Phase 7 - Security Module
-
-Creates
-
-- IAM Roles
-- Security Groups
-
----
-
-## Phase 8 - Monitoring Module
-
-Creates
-
-- CloudWatch Log Groups
-
----
-## Phase 9 – Terraform Workspaces
-
-Created
+Add
 
 ```bash
 
-terraform workspace new staging
-terraform workspace new production
+AWS_ACCESS_KEY_ID
+
+AWS_SECRET_ACCESS_KEY
+
+AWS_REGION
 ```
-
-# Terraform Commands Used
-
-```bash
-terraform init
-
-terraform fmt
-
-terraform validate
-
-terraform workspace new staging
-
-terraform workspace select production
-
-terraform plan
-
-terraform apply
-
-terraform destroy
-```
-
-Terraform Quality Checks
-
-- terraform fmt
-- terraform validate
-- TFLint
+GitHub automatically uses these during deployment.
 
 ---
+## Phase 9 — Configure Production Environment Protection
 
-# Final Project Workflow
+GitHub
 
-```
-Developer
+Settings
 
-        │
+↓
 
-        ▼
+Environments
 
+↓
+
+Production
+
+Configure
+
+- Required Reviewers
+- Manual Approval
+
+This ensures production deployments require approval.
+
+---
+## Phase 10 - Implement Branch-Based Deployment
+
+```bash
 Feature Branch
 
-        │
-
-        ▼
+↓
 
 Pull Request
 
-        │
+↓
 
-        ▼
+Staging Deployment
 
-GitHub Actions (Staging)
+↓
 
-        │
+Testing
 
-        ▼
+↓
 
-Terraform Checks
-(fmt → validate → tflint)
+Merge to Main
 
-        │
+↓
 
-        ▼
+Production Deployment
 
-Docker Build
+---
+## Phase 11 — Configure ECS Auto Scaling
 
-        │
+Terraform creates
+```bash
+Minimum Tasks = 2
 
-        ▼
-
-Push to Amazon ECR
-
-        │
-
-        ▼
-
-Deploy to ECS Staging
-
-        │
-
-        ▼
-
-Application Testing
-
-        │
-
-        ▼
-
-Merge into Main
-
-        │
-
-        ▼
-
-GitHub Actions (Production)
-
-        │
-
-        ▼
-
-Terraform Checks
-
-        │
-
-        ▼
-
-Docker Build
-
-        │
-
-        ▼
-
-Push to ECR
-
-        │
-
-        ▼
-
-Update ECS Task Definition
-
-        │
-
-        ▼
-
-Deploy ECS Service
-
-        │
-
-        ▼
-
-Wait for Service Stability
-
-        │
-
-        ▼
-
-Success?
-      /        \
-    Yes        No
-     │          │
-     ▼          ▼
- Deployment   Rollback to Previous
- Successful   Stable Task Definition
+Maximum Tasks = 6
 ```
 
+Scaling Policies
 
-# Deployment Rollback Strategy
+- CPU Utilization
+- Memory Utilization
+---
+
+## Phase 12 - Deployment Rollback Strategy
+
+The deployment automatically rolls back when
+
+- ECS deployment becomes unhealthy
+- ECS service does not reach a stable state
+
+Rollback restores the previously running ECS Task Definition.
+
+> <img width="1074" height="604" alt="image" src="https://github.com/user-attachments/assets/cd920821-811f-4262-ac8c-fcee3987bf38" />
 
 Before deployment
 
@@ -577,45 +508,35 @@ Rollback uses
 ```bash
 aws ecs update-service
 ```
+---
 
-to restore the previous task definition automatically.
+## Phase 13 - Application Load Balancer
+
+Terraform provisions
+- Application Load Balancer
+- Listener
+- Target Group
+
+Traffic Flow
+```bash
+Internet
+
+↓
+
+ALB
+
+↓
+
+Target Group
+
+↓
+
+Fargate Tasks
+```
 
 ---
 
-# ECS Auto Scaling
-
-Configured Auto Scaling
-
-Minimum Tasks
-
-```
-2
-```
-
-Maximum Tasks
-
-```
-6
-```
-
-Scaling Policies
-
-- CPU Utilization
-- Memory Utilization
-
----
-
-# Application Load Balancer
-
-Configured with
-
-- Health Checks
-- Target Groups
-- Listener Rules
-
----
-
-# CloudWatch Monitoring
+## Phase 14 - CloudWatch Monitoring
 
 CloudWatch is used for
 
@@ -626,7 +547,7 @@ CloudWatch is used for
 
 ---
 
-# Security
+## Phase 15 - Security
 
 Implemented
 
@@ -639,24 +560,91 @@ Implemented
 Secrets are never stored in source code.
 
 ---
-
-# Docker
-
-Docker was used to
-
-- Containerize the application
-- Build images
-- Push images to Amazon ECR
-- Deploy immutable containers
-
-Commands
+# Terraform Commands Used
+```
 
 ```bash
-docker build
+terraform init
 
-docker tag
+terraform fmt
 
-docker push
+terraform validate
+
+terraform workspace new staging
+
+terraform workspace select production
+
+terraform plan
+
+terraform apply
+
+terraform destroy
+```
+
+Terraform Quality Checks
+
+- terraform fmt
+- terraform validate
+- TFLint
+
+---
+
+# Final Project Workflow
+
+```
+Create GitHub Repository
+        │
+        ▼
+Create Bootstrap (S3 + DynamoDB)
+        │
+        ▼
+Configure Remote Backend
+        │
+        ▼
+Create Terraform Modules
+        │
+        ▼
+Create Terraform Workspaces
+        │
+        ▼
+Deploy Staging Infrastructure
+        │
+        ▼
+Deploy Production Infrastructure
+        │
+        ▼
+Develop & Dockerize Application
+        │
+        ▼
+Create Feature Branch
+        │
+        ▼
+Pull Request → Staging
+        │
+        ▼
+staging.yml CI/CD Pipeline
+        │
+        ▼
+Merge Staging → Main
+        │
+        ▼
+Production Approval
+        │
+        ▼
+production.yml CI/CD Pipeline
+        │
+        ▼
+Build Image → Push to ECR
+        │
+        ▼
+Deploy New ECS Task Definition
+        │
+        ▼
+Wait for Stability + Health Checks
+        │
+        ├─────────────── Healthy ───────────────► Deployment Successful
+        │
+        └─────────────── Unhealthy ─────────────► Rollback to Previous Task Definition
 ```
 
 ---
@@ -687,102 +675,6 @@ aws ecr describe-repositories
 aws elbv2 describe-target-groups
 
 ```
-
----
-
-# Setup Instructions
-
-Build Docker Image 
-
-```bash
-docker build -t application .
-```
-Push Image to Amazon ECR
-
-```bash
-aws ecr get-login-password \
-| docker login \
---username AWS \
---password-stdin <repository-url>
-
-docker tag application:latest repository:latest
-
-docker push repository:latest
-```
-Configure GitHub Secrets
-
-```bash
-
-AWS_ACCESS_KEY_ID
-
-AWS_SECRET_ACCESS_KEY
-
-AWS_REGION
-
-```
-Configure Production Environment Protection
-create 2 environments in github named staging and production
-
-Add the same to environment secrets in each environment
-```bash
-
-AWS_ACCESS_KEY_ID
-
-AWS_SECRET_ACCESS_KEY
-
-AWS_REGION
-
-```
-
-GitHub
-
-Settings
-
-↓
-
-Environments
-
-↓
-
-Production
-
-Configure
-
-- Required Reviewers
-- Manual Approval
-
-This ensures production deployments require approval.
-
-
-Implement Branch-Based Deployment
-
-```bash
-git branch feature/pipeline
-```
-Push code to staging branch
-merge to staging branch
-
-trigers the staging Deployment
-
-Push code to main branch
-merge to main
-Approve the merge
-Trigers the Production Deployment
-
-
-
-Push Code from feature branch to staging branch and Click on new pull request and merge
-> <img width="602" height="338" alt="image" src="https://github.com/user-attachments/assets/41af93ac-3fb7-42d7-9b8f-7beef36c6c4d" />
-
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/bbf66689-4b4f-42f2-a092-5f93b86f0f8c" />
-
-Push Code from staging branch to main branch and approve 
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/8a02b420-7ecb-4d2b-a046-8cc032a6f953" />
-
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/3f4e51e9-f691-4ec8-b19c-bcf6e8c403db" />
-
-
-GitHub Actions automatically deploys the application.
 
 ---
 
@@ -910,6 +802,8 @@ Through this project I learned
 
 Output :- 
 
+---
+
 > <img width="1177" height="466" alt="image" src="https://github.com/user-attachments/assets/2e43b408-b569-4fb0-bdc8-13962bcedbd6" />
 
 > <img width="1067" height="558" alt="image" src="https://github.com/user-attachments/assets/600118ce-8600-4a06-a6c0-0b2f8f3b56aa" />
@@ -932,8 +826,18 @@ Output :-
 
 > <img width="1128" height="327" alt="image" src="https://github.com/user-attachments/assets/94a03e62-c039-4d3e-977c-a3e772e420c5" />
 
+> <img width="602" height="338" alt="image" src="https://github.com/user-attachments/assets/41af93ac-3fb7-42d7-9b8f-7beef36c6c4d" />
 
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/bbf66689-4b4f-42f2-a092-5f93b86f0f8c" />
 
-DevOps Capstone Project
+Push Code from staging branch to main branch and approve 
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/8a02b420-7ecb-4d2b-a046-8cc032a6f953" />
+
+<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/3f4e51e9-f691-4ec8-b19c-bcf6e8c403db" />
+
+---
+
+## DevOps Capstone Project
+---
 
 Terraform • AWS • Docker • ECS • GitHub Actions • Infrastructure as Code
