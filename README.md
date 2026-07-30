@@ -283,7 +283,8 @@ modules/
     monitoring/
 ```
 
-Networking Module
+
+### Networking Module
 
 Creates
 
@@ -293,7 +294,8 @@ Creates
 - Internet Gateway
 - Route Tables
 
-Security Module
+
+### Security Module
 
 Creates
 - Security Groups
@@ -302,7 +304,8 @@ For
 - ECS
 - ALB
 
-Compute Module
+
+### Compute Module
 
 Creates
 
@@ -314,11 +317,13 @@ Creates
 - Target Group
 - Listener
 
-Monitoring Module
+
+### Monitoring Module
 
 Creates
 - CloudWatch Log Groups
 ---
+
 ## Phase 4 - Deploy Staging Infrastructure 
 
 ```bash
@@ -405,13 +410,14 @@ GitHub
 
 Settings
 
-↓
+    ↓
 
 Environments
 
-↓
+    ↓
 
 Production
+
 
 Configure
 
@@ -426,23 +432,23 @@ This ensures production deployments require approval.
 ```bash
 Feature Branch
 
-↓
+    ↓
 
 Pull Request
 
-↓
+    ↓
 
 Staging Deployment
 
-↓
+    ↓
 
 Testing
 
-↓
+    ↓
 
 Merge to Main
 
-↓
+    ↓
 
 Production Deployment
 ```
@@ -481,33 +487,34 @@ Before deployment
 ```
 Current Task Definition
 
-↓
+    ↓
 
 Save Task Definition
 
-↓
+    ↓
 
 Deploy New Revision
 
-↓
+    ↓
 
 Wait for ECS Stability
 
-↓
+    ↓
 
 Deployment Failed?
 
-↓
+    ↓
 
-YES
+   YES
 
-↓
+    ↓
 
 Rollback to Previous Stable Task Definition
 
-↓
+    ↓
 
 Deployment Restored
+
 ```
 
 Rollback uses
@@ -525,20 +532,22 @@ Terraform provisions
 - Target Group
 
 Traffic Flow
+
 ```bash
 Internet
 
-↓
+    ↓
 
-ALB
+   ALB
 
-↓
+    ↓
 
 Target Group
 
-↓
+    ↓
 
 Fargate Tasks
+
 ```
 
 ---
@@ -835,12 +844,13 @@ Output :-
 
 > <img width="602" height="338" alt="image" src="https://github.com/user-attachments/assets/41af93ac-3fb7-42d7-9b8f-7beef36c6c4d" />
 
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/bbf66689-4b4f-42f2-a092-5f93b86f0f8c" />
+> <img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/bbf66689-4b4f-42f2-a092-5f93b86f0f8c" />
 
 Push Code from staging branch to main branch and approve 
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/8a02b420-7ecb-4d2b-a046-8cc032a6f953" />
 
-<img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/3f4e51e9-f691-4ec8-b19c-bcf6e8c403db" />
+> <img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/8a02b420-7ecb-4d2b-a046-8cc032a6f953" />
+
+> <img width="940" height="529" alt="image" src="https://github.com/user-attachments/assets/3f4e51e9-f691-4ec8-b19c-bcf6e8c403db" />
 
 ---
 
