@@ -249,9 +249,9 @@ cd infra-as-code-pipeline
 Terraform cannot store its own state in an S3 bucket that does not yet exist.
 
 A separate bootstrap directory is used to create:
--S3 Bucket
+- S3 Bucket
 - DynamoDB Table
-- 
+
 ```bash
 cd bootstrap
 
@@ -284,6 +284,7 @@ modules/
 ```
 
 Networking Module
+
 Creates
 
 - VPC
@@ -293,6 +294,7 @@ Creates
 - Route Tables
 
 Security Module
+
 Creates
 - Security Groups
 
@@ -301,6 +303,7 @@ For
 - ALB
 
 Compute Module
+
 Creates
 
 - ECS Cluster
@@ -312,6 +315,7 @@ Creates
 - Listener
 
 Monitoring Module
+
 Creates
 - CloudWatch Log Groups
 ---
@@ -441,9 +445,11 @@ Merge to Main
 ↓
 
 Production Deployment
+```
 
 ---
-## Phase 11 — Configure ECS Auto Scaling
+
+## Phase 11 - Configure ECS Auto Scaling
 
 Terraform creates
 ```bash
@@ -456,6 +462,7 @@ Scaling Policies
 
 - CPU Utilization
 - Memory Utilization
+
 ---
 
 ## Phase 12 - Deployment Rollback Strategy
